@@ -1,184 +1,124 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
+import React, { useState } from 'react';
+import { VocabularyItem, QuizMode } from './types';
+import { QuizScreen } from './QuizScreen';
+import { parseVocabularyCSV } from './utils/csvImporter';
 
-  &:hover {
-    border-color: var(--accent-border);
+// 初期ダミーデータ（テスト用）
+const initialItems: VocabularyItem[] = [
+  { id: '1', word: 'abandon', meaning: '〜を捨てる', type: 'word', is_mastered: false },
+  { id: '2', word: 'abundant', meaning: '豊富な', type: 'word', is_mastered: true },
+  { id: '3', word: 'look after', meaning: '〜の世話をする', type: 'phrase', is_mastered: false },
+  { id: '4', word: 'run out of', meaning: '〜を使い果たす', type: 'phrase', is_mastered: false },
+];
+
+export function App() {
+  const [items, setItems] = useState<VocabularyItem[]>(initialItems);
+  const [selectedMode, setSelectedMode] = useState<QuizMode>('all');
+  const [isTesting, setIsTesting] = useState(false);
+
+  // 1. CSV取り込み処理
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const parsed = parseVocabularyCSV(text);
+      const newItems: VocabularyItem[] = parsed.map((item, idx) => ({
+        ...item,
+        id: Date.now().toString() + idx,
+        is_mastered: false
+      }));
+
+      setItems(prev => [...prev, ...newItems]);
+      alert(`${newItems.length}件のデータをインポートしました！`);
+    };
+    reader.readAsText(file);
+  };
+
+  // 2. マスター状態の更新
+  const handleUpdateMastery = (id: string, isMastered: boolean) => {
+    setItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, is_mastered: isMastered } : item))
+    );
+  };
+
+  // 3. マスター率の計算
+  const totalCount = items.length;
+  const masteredCount = items.filter(i => i.is_mastered).length;
+  const masterRate = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+
+  if (isTesting) {
+    return (
+      <QuizScreen
+        items={items}
+        mode={selectedMode}
+        onUpdateMastery={handleUpdateMastery}
+        onFinish={() => setIsTesting(false)}
+      />
+    );
   }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+
+  return (
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem', fontFamily: 'sans-serif' }}>
+      <h1>英検準2級 学習アプリ</h1>
+
+      {/* ダッシュボード：マスター率 */}
+      <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
+        <h3>学習進捗状況</h3>
+        <p>全データ数: {totalCount} 件（マスター済み: {masteredCount} 件 / 要復習: {totalCount - masteredCount} 件）</p>
+        
+        {/* プログレスバー */}
+        <div style={{ background: '#e2e8f0', borderRadius: '999px', height: '16px', overflow: 'hidden' }}>
+          <div style={{ width: `${masterRate}%`, background: '#22c55e', height: '100%', transition: 'width 0.3s' }} />
+        </div>
+        <p style={{ textAlign: 'right', fontWeight: 'bold', marginTop: '0.5rem' }}>マスター率: {masterRate}%</p>
+      </div>
+
+      {/* 設定1: 単語・熟語の選択 */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>出題対象を選択：</label>
+        <select
+          value={selectedMode}
+          onChange={(e) => setSelectedMode(e.target.value as QuizMode)}
+          style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', borderRadius: '6px' }}
+        >
+          <option value="all">すべて（単語 + 熟語）</option>
+          <option value="word">単語のみ</option>
+          <option value="phrase">熟語のみ</option>
+        </select>
+      </div>
+
+      {/* 設定2: 今すぐテスト開始 */}
+      <button
+        onClick={() => setIsTesting(true)}
+        style={{
+          width: '100%',
+          padding: '1rem',
+          backgroundColor: '#2563eb',
+          color: '#ffffff',
+          border: 'none',
+          borderRadius: '6px',
+          fontSize: '1.2rem',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          marginBottom: '2rem'
+        }}
+      >
+        今すぐテストを開始（ランダム10問）
+      </button>
+
+      {/* 設定3: CSVインポート機能 */}
+      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+        <h3>CSVデータから一括登録</h3>
+        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+          フォーマット例: <code>単語,意味,wordまたはphrase,例文,例文訳</code>
+        </p>
+        <input type="file" accept=".csv" onChange={handleFileUpload} />
+      </div>
+    </div>
+  );
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
-}
-
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
-  width: 100%;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
-
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
-  }
-}
+export default App;
