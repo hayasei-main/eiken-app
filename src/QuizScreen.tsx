@@ -1,160 +1,134 @@
-import React, { useState } from 'react';
-
-export interface WordWithStatus {
-  id: number;
-  term: string;
-  meaning: string;
-  item_type: 'word' | 'idiom';
-  part_of_speech?: string;
-  example_sentence?: string;
-  example_meaning?: string;
-  dummy_choices?: string[];
-  status?: 'not_learned' | 'learning' | 'mastered';
-  consecutive_correct?: number;
-  is_weak?: boolean;
-}
+import React, { useState, useEffect } from 'react';
+import type { VocabularyItem, QuizMode } from './types';
 
 interface QuizScreenProps {
-  words: WordWithStatus[];
-  initialItemType?: 'all' | 'word' | 'idiom';
-  onWordsChange: (words: WordWithStatus[]) => void;
+  items: VocabularyItem[];
+  mode: QuizMode;
+  onUpdateMastery: (id: string | number, isMastered: boolean) => void;
   onFinish: () => void;
 }
 
-export const QuizScreen: React.FC<QuizScreenProps> = ({
-  words,
-  initialItemType = 'all',
-  onFinish,
-}) => {
-  // 該当する単語を抽出
-  const quizWords = words.filter(
-    (w) => initialItemType === 'all' || w.item_type === initialItemType
-  );
-
+export const QuizScreen: React.FC<QuizScreenProps> = ({ items, mode, onUpdateMastery, onFinish }) => {
+  const [quizSet, setQuizSet] = useState<VocabularyItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [options, setOptions] = useState<string[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
 
-  if (quizWords.length === 0) {
+  useEffect(() => {
+    let filtered = items;
+    if (mode === 'word') filtered = items.filter(i => i.type === 'word');
+    if (mode === 'phrase') filtered = items.filter(i => i.type === 'phrase' || i.type === 'idiom');
+
+    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+    setQuizSet(shuffled.slice(0, 10));
+    setCurrentIndex(0);
+    setScore(0);
+  }, [items, mode]);
+
+  useEffect(() => {
+    if (quizSet.length === 0 || currentIndex >= quizSet.length) return;
+
+    const current = quizSet[currentIndex];
+    const otherMeanings = items
+      .filter(i => i.id !== current.id)
+      .map(i => i.meaning)
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3);
+
+    const choices = [...otherMeanings, current.meaning].sort(() => 0.5 - Math.random());
+    setOptions(choices);
+    setSelectedAnswer(null);
+  }, [currentIndex, quizSet, items]);
+
+  if (quizSet.length === 0) {
     return (
-      <div className="max-w-xl mx-auto p-8 text-center bg-white rounded-3xl mt-8 shadow-sm">
-        <p className="text-gray-600 font-bold mb-4">テスト対象の単語が登録されていません。</p>
-        <button
-          onClick={onFinish}
-          className="bg-blue-600 text-white font-bold px-6 py-2 rounded-xl"
-        >
-          ホームへ戻る
-        </button>
+      <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <p>該当する問題がありません。</p>
+        <button onClick={onFinish} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>戻る</button>
       </div>
     );
   }
 
-  const currentWord = quizWords[currentIndex];
+  const currentItem = quizSet[currentIndex];
 
-  // 選択肢の作成（正解 + ダミー選択肢）
-  const choices = [
-    currentWord.meaning,
-    ...(currentWord.dummy_choices || ['を避ける', 'を拒否する', 'を想像する']),
-  ].slice(0, 4);
+  const handleSelectOption = (option: string) => {
+    if (selectedAnswer !== null) return;
 
-  const handleSelect = (choice: string) => {
-    if (selectedAnswer !== null) return; // 回答済みならスキップ
+    setSelectedAnswer(option);
+    const isCorrect = option === currentItem.meaning;
+    onUpdateMastery(currentItem.id, isCorrect);
 
-    setSelectedAnswer(choice);
-    const correct = choice === currentWord.meaning;
-    setIsCorrect(correct);
-
-    if (correct) {
-      setScore((prev) => prev + 1);
+    if (isCorrect) {
+      setScore(prev => prev + 1);
     }
   };
 
   const handleNext = () => {
-    if (currentIndex + 1 < quizWords.length) {
-      setCurrentIndex((prev) => prev + 1);
-      setSelectedAnswer(null);
-      setIsCorrect(null);
+    if (currentIndex + 1 < quizSet.length) {
+      setCurrentIndex(prev => prev + 1);
     } else {
-      setIsFinished(true);
+      const finalScore = score + (selectedAnswer === currentItem.meaning ? 1 : 0);
+      alert(`テスト終了！ スコア: ${finalScore} / ${quizSet.length}`);
+      onFinish();
     }
   };
 
-  if (isFinished) {
-    return (
-      <div className="max-w-xl mx-auto p-8 text-center bg-white rounded-3xl mt-8 shadow-lg space-y-6">
-        <div className="text-5xl">🎉</div>
-        <h2 className="text-2xl font-black text-gray-900">テスト完了！</h2>
-        <p className="text-xl font-bold text-gray-700">
-          スコア: <span className="text-blue-600 text-3xl">{score}</span> / {quizWords.length}
-        </p>
-        <button
-          onClick={onFinish}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-md transition"
-        >
-          ホームに戻る
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
-      {/* 進捗 */}
-      <div className="flex justify-between items-center text-xs font-bold text-gray-400">
-        <span>問題 {currentIndex + 1} / {quizWords.length}</span>
-        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
-          {currentWord.item_type === 'word' ? '英単語' : '英熟語'}
-        </span>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem', fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <span>問題 {currentIndex + 1} / {quizSet.length}</span>
+        <span>種別: {currentItem.type === 'word' ? '単語' : '熟語'}</span>
       </div>
 
-      {/* 問題カード */}
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center space-y-4">
-        <h2 className="text-3xl sm:text-4xl font-black text-gray-900">{currentWord.term}</h2>
-        {currentWord.part_of_speech && (
-          <span className="inline-block bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-md font-bold">
-            {currentWord.part_of_speech}
-          </span>
-        )}
+      <div style={{ background: '#f4f4f5', padding: '2rem', borderRadius: '8px', textAlign: 'center', marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '2rem', margin: 0 }}>{currentItem.word}</h2>
       </div>
 
-      {/* 4択選択肢 */}
-      <div className="space-y-3">
-        {choices.map((choice, idx) => {
-          let btnStyle = "bg-white text-gray-800 hover:bg-gray-50 border-gray-200";
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {options.map((option, idx) => {
+          let btnColor = '#ffffff';
           if (selectedAnswer !== null) {
-            if (choice === currentWord.meaning) {
-              btnStyle = "bg-emerald-500 text-white border-emerald-500 font-bold";
-            } else if (choice === selectedAnswer) {
-              btnStyle = "bg-red-500 text-white border-red-500 font-bold";
-            } else {
-              btnStyle = "bg-gray-100 text-gray-400 border-gray-100";
-            }
+            if (option === currentItem.meaning) btnColor = '#dcfce7';
+            else if (option === selectedAnswer) btnColor = '#fee2e2';
           }
 
           return (
             <button
               key={idx}
-              onClick={() => handleSelect(choice)}
-              className={`w-full p-4 rounded-2xl border text-left font-bold text-sm transition flex justify-between items-center ${btnStyle}`}
+              onClick={() => handleSelectOption(option)}
+              style={{
+                padding: '1rem',
+                fontSize: '1rem',
+                backgroundColor: btnColor,
+                border: '1px solid #ccc',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
             >
-              <span>{choice}</span>
-              {selectedAnswer !== null && choice === currentWord.meaning && <span>◯</span>}
-              {selectedAnswer !== null && choice === selectedAnswer && choice !== currentWord.meaning && <span>✕</span>}
+              {option}
             </button>
           );
         })}
       </div>
 
-      {/* 次へボタン */}
       {selectedAnswer !== null && (
         <button
           onClick={handleNext}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition"
+          style={{
+            marginTop: '1.5rem',
+            width: '100%',
+            padding: '1rem',
+            backgroundColor: '#2563eb',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '1rem',
+            cursor: 'pointer'
+          }}
         >
-          {currentIndex + 1 < quizWords.length ? '次の問題へ ➔' : '結果を見る'}
+          {currentIndex + 1 === quizSet.length ? '結果を見る' : '次の問題へ'}
         </button>
       )}
     </div>

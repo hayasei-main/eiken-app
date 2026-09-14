@@ -1,182 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import { MOCK_WORDS } from './mockData';
-import { 
-  fetchWordsFromCloud, 
-  addWordToCloud, 
-  updateWordInCloud, 
-  deleteWordFromCloud 
-} from './supabaseClient';
-
-// 型定義を App.tsx 内で完結させる
-export interface WordWithStatus {
-  id: number;
-  term: string;
-  meaning: string;
-  item_type: 'word' | 'idiom';
-  part_of_speech?: string;
-  example_sentence?: string;
-  example_meaning?: string;
-  dummy_choices?: string[];
-  status?: 'not_learned' | 'learning' | 'mastered';
-  consecutive_correct?: number;
-  is_weak?: boolean;
-}
-
-export type FilterStatus = 'all' | 'weak' | 'mastered' | 'not_learned';
-export type FilterItemType = 'all' | 'word' | 'idiom';
-
-// 各画面コンポーネントのインポート
-import { DashboardScreen } from './DashboardScreen';
+import React, { useState } from 'react';
+import type { VocabularyItem, QuizMode } from './types';
 import { QuizScreen } from './QuizScreen';
 import { WordListScreen } from './WordListScreen';
-import { AdminManageScreen } from './AdminManageScreen';
+import { parseVocabularyCSV } from './utils/csvImporter';
 
-type TabType = 'dashboard' | 'quiz' | 'list' | 'admin';
+const initialItems: VocabularyItem[] = [
+  { id: '1', word: 'abandon', meaning: '〜を捨てる', type: 'word', is_mastered: false },
+  { id: '2', word: 'abundant', meaning: '豊富な', type: 'word', is_mastered: true },
+  { id: '3', word: 'look after', meaning: '〜の世話をする', type: 'phrase', is_mastered: false },
+  { id: '4', word: 'run out of', meaning: '〜を使い果たす', type: 'phrase', is_mastered: false },
+];
 
-export const App: React.FC = () => {
-  const [words, setWords] = useState<WordWithStatus[]>(MOCK_WORDS);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [quizFilter, setQuizFilter] = useState<FilterItemType>('all');
-  const [listInitialFilter, setListInitialFilter] = useState<FilterStatus>('all');
+export function App() {
+  const [items, setItems] = useState<VocabularyItem[]>(initialItems);
+  const [selectedMode, setSelectedMode] = useState<QuizMode>('all');
+  const [currentView, setCurrentView] = useState<'home' | 'quiz' | 'list'>('home');
+  const [listFilter, setListFilter] = useState<string>('all');
 
-  // 1. 起動時にSupabaseから単語一覧を取得
-  useEffect(() => {
-    const loadCloudData = async () => {
-      setIsLoading(true);
-      const cloudWords = await fetchWordsFromCloud();
-      if (cloudWords && cloudWords.length > 0) {
-        setWords(cloudWords as WordWithStatus[]);
-      }
-      setIsLoading(false);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const parsed = parseVocabularyCSV(text);
+      const newItems: VocabularyItem[] = parsed.map((item, idx) => ({
+        ...item,
+        id: Date.now().toString() + idx,
+        is_mastered: false
+      }));
+
+      setItems(prev => [...prev, ...newItems]);
+      alert(`${newItems.length}件のデータをインポートしました！`);
     };
-    loadCloudData();
-  }, []);
-
-  // 2. 画面遷移
-  const handleStartQuiz = (options: { itemType: FilterItemType }) => {
-    setQuizFilter(options.itemType);
-    setActiveTab('quiz');
+    reader.readAsText(file);
   };
 
-  const handleNavigateToList = (filter: FilterStatus) => {
-    setListInitialFilter(filter);
-    setActiveTab('list');
+  const handleUpdateMastery = (id: string | number, isMastered: boolean) => {
+    setItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, is_mastered: isMastered } : item))
+    );
   };
 
-  // 3. クラウド操作ハンドラー
-  const handleAddWord = async (newWord: Omit<WordWithStatus, 'id'>) => {
-    const savedWord = await addWordToCloud(newWord);
-    if (savedWord) {
-      setWords((prev) => [savedWord, ...prev]);
-    }
-  };
+  const totalCount = items.length;
+  const masteredCount = items.filter(i => i.is_mastered).length;
+  const masterRate = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
 
-  const handleUpdateWord = async (id: number, updatedData: Partial<WordWithStatus>) => {
-    const updated = await updateWordInCloud(id, updatedData);
-    if (updated) {
-      setWords((prev) => prev.map((w) => (w.id === id ? { ...w, ...updated } : w)));
-    }
-  };
-
-  const handleDeleteWord = async (id: number) => {
-    const success = await deleteWordFromCloud(id);
-    if (success) {
-      setWords((prev) => prev.filter((w) => w.id !== id));
-    }
-  };
-
-  if (isLoading) {
+  if (currentView === 'quiz') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center text-gray-600 font-bold">
-        単語データを読み込み中...
-      </div>
+      <QuizScreen
+        items={items}
+        mode={selectedMode}
+        onUpdateMastery={handleUpdateMastery}
+        onFinish={() => setCurrentView('home')}
+      />
+    );
+  }
+
+  if (currentView === 'list') {
+    return (
+      <WordListScreen
+        words={items}
+        initialFilter={listFilter}
+        onBack={() => setCurrentView('home')}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 flex flex-col font-sans">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div
-            onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-2 cursor-pointer select-none"
-          >
-            <span className="w-8 h-8 rounded-lg bg-blue-600 text-white font-black text-lg flex items-center justify-center shadow-xs">
-              E
-            </span>
-            <div>
-              <span className="font-extrabold text-base text-gray-900 block leading-tight">
-                英検準2級 単語テスト
-              </span>
-              <span className="text-[10px] text-gray-400 block font-medium">クラウド同期版</span>
-            </div>
-          </div>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1.5rem', fontFamily: 'sans-serif' }}>
+      <h1>英検準2級 学習アプリ</h1>
 
-          <nav className="flex gap-1 sm:gap-2">
-            {[
-              { id: 'dashboard', label: 'ホーム' },
-              { id: 'quiz', label: 'テスト' },
-              { id: 'list', label: '単語一覧' },
-              { id: 'admin', label: 'データ管理' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  if (tab.id === 'list') setListInitialFilter('all');
-                  setActiveTab(tab.id as TabType);
-                }}
-                className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-bold transition ${
-                  activeTab === tab.id
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+      <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
+        <h3>学習進捗状況</h3>
+        <p>全データ数: {totalCount} 件（マスター済み: {masteredCount} 件 / 要復習: {totalCount - masteredCount} 件）</p>
+        
+        <div style={{ background: '#e2e8f0', borderRadius: '999px', height: '16px', overflow: 'hidden', margin: '0.75rem 0' }}>
+          <div style={{ width: `${masterRate}%`, background: '#22c55e', height: '100%', transition: 'width 0.3s' }} />
         </div>
-      </header>
+        <p style={{ textAlign: 'right', fontWeight: 'bold', margin: 0 }}>マスター率: {masterRate}%</p>
+      </div>
 
-      <main className="flex-1 pb-12">
-        {activeTab === 'dashboard' && (
-          <DashboardScreen
-            words={words}
-            onStartQuiz={handleStartQuiz}
-            onNavigateToList={handleNavigateToList}
-          />
-        )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+        <button
+          onClick={() => { setListFilter('all'); setCurrentView('list'); }}
+          style={{ flex: 1, padding: '0.75rem', borderRadius: '6px', border: '1px solid #ccc', cursor: 'pointer' }}
+        >
+          全単語一覧 ({totalCount})
+        </button>
+        <button
+          onClick={() => { setListFilter('weak'); setCurrentView('list'); }}
+          style={{ flex: 1, padding: '0.75rem', borderRadius: '6px', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', color: '#991b1b', cursor: 'pointer' }}
+        >
+          要復習 ({totalCount - masteredCount})
+        </button>
+      </div>
 
-        {activeTab === 'quiz' && (
-          <QuizScreen
-            key={`quiz-${quizFilter}-${Date.now()}`}
-            words={words}
-            initialItemType={quizFilter}
-            onWordsChange={setWords}
-            onFinish={() => setActiveTab('dashboard')}
-          />
-        )}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>出題対象を選択：</label>
+        <select
+          value={selectedMode}
+          onChange={(e) => setSelectedMode(e.target.value as QuizMode)}
+          style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', borderRadius: '6px' }}
+        >
+          <option value="all">すべて（単語 + 熟語）</option>
+          <option value="word">単語のみ</option>
+          <option value="phrase">熟語のみ</option>
+        </select>
+      </div>
 
-        {activeTab === 'list' && (
-          <WordListScreen words={words} initialFilter={listInitialFilter} />
-        )}
+      <button
+        onClick={() => setCurrentView('quiz')}
+        style={{
+          width: '100%',
+          padding: '1rem',
+          backgroundColor: '#2563eb',
+          color: '#ffffff',
+          border: 'none',
+          borderRadius: '6px',
+          fontSize: '1.2rem',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          marginBottom: '2rem'
+        }}
+      >
+        今すぐテストを開始（ランダム10問）
+      </button>
 
-        {activeTab === 'admin' && (
-          <AdminManageScreen
-            initialWords={words}
-            onAddWord={handleAddWord}
-            onUpdateWord={handleUpdateWord}
-            onDeleteWord={handleDeleteWord}
-          />
-        )}
-      </main>
-
-      <footer className="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-400">
-        英検準2級 英単語・熟語テストアプリ &copy; 2026
-      </footer>
+      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+        <h3>CSVデータから一括登録</h3>
+        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+          フォーマット例: <code>単語,意味,wordまたはphrase,例文,例文訳</code>
+        </p>
+        <input type="file" accept=".csv" onChange={handleFileUpload} />
+      </div>
     </div>
   );
-};
+}
 
 export default App;

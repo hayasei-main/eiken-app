@@ -1,18 +1,14 @@
-export type ItemType = 'word' | 'idiom';
-export type LearningStatus = 'not_learned' | 'learning' | 'mastered';
-export type FilterStatus = 'all' | 'weak' | 'mastered' | 'not_learned';
-export type FilterItemType = 'all' | 'word' | 'idiom';
+export type ItemType = 'word' | 'phrase' | 'idiom';
 
-export interface WordWithStatus {
-  id: number;
-  term: string;
+export interface VocabularyItem {
+  id: string | number;
+  word: string;
   meaning: string;
-  item_type: ItemType;
-  part_of_speech?: string;
-  example_sentence?: string;
-  example_meaning?: string;
-  dummy_choices?: string[];
-  status?: LearningStatus;
-  consecutive_correct?: number;
+  type: ItemType;
+  is_mastered: boolean;
   is_weak?: boolean;
+  example_sentence?: string;
+  example_translation?: string;
 }
+
+export type QuizMode = 'all' | 'word' | 'phrase';
