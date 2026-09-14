@@ -14,14 +14,27 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   onUpdateMastery,
   onFinish,
 }) => {
-  // 出題対象のフィルタリング
-  const quizItems = React.useMemo(() => {
+  // 1. 初回レンダリング時のみ問題リスト（10問）を確定（stateで固定）
+  const [quizItems] = useState<VocabularyItem[]>(() => {
     let filtered = items;
     if (mode === 'word') filtered = items.filter((i) => i.type === 'word');
     if (mode === 'phrase') filtered = items.filter((i) => i.type === 'phrase');
     if (mode === 'weak') filtered = items.filter((i) => i.is_weak);
     return [...filtered].sort(() => Math.random() - 0.5).slice(0, 10);
-  }, [items, mode]);
+  });
+
+  // 2. 初回レンダリング時のみ全問題の選択肢を生成して固定
+  const [allChoices] = useState<Record<string, string[]>>(() => {
+    const choicesMap: Record<string, string[]> = {};
+    quizItems.forEach((item) => {
+      const otherMeanings = items
+        .filter((i) => i.word !== item.word)
+        .map((i) => i.meaning);
+      const shuffledOthers = [...otherMeanings].sort(() => Math.random() - 0.5).slice(0, 3);
+      choicesMap[item.id] = [...shuffledOthers, item.meaning].sort(() => Math.random() - 0.5);
+    });
+    return choicesMap;
+  });
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -40,19 +53,10 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
   }
 
   const currentItem = quizItems[currentIndex];
-
-  // 選択肢の生成（現在の正解 + ランダムな他3つの意味）
-  const choices = React.useMemo(() => {
-    if (!currentItem) return [];
-    const otherMeanings = items
-      .filter((i) => i.id !== currentItem.id)
-      .map((i) => i.meaning);
-    const shuffledOthers = [...otherMeanings].sort(() => Math.random() - 0.5).slice(0, 3);
-    return [...shuffledOthers, currentItem.meaning].sort(() => Math.random() - 0.5);
-  }, [currentItem, items]);
+  const choices = allChoices[currentItem.id] || [currentItem.meaning];
 
   const handleSelectChoice = (choice: string) => {
-    if (selectedAnswer !== null) return; // 回答済みなら選択不可
+    if (selectedAnswer !== null) return;
 
     const isCorrect = choice === currentItem.meaning;
     setSelectedAnswer(choice);
@@ -109,7 +113,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
                   </div>
                 )}
               </div>
-              <span style={{ fontSize: '1.25rem', fontWeight: 900, color: res.isCorrect ? '#059669' : '#dc2626' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 900, color: res.isCorrect ? '#059669' : '#dc2626' }}>
                 {res.isCorrect ? '⭕️ 正解 (マスター済み)' : '❌ 不正解 (要復習)'}
               </span>
             </div>
@@ -147,11 +151,11 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({
 
           if (selectedAnswer !== null) {
             if (choice === currentItem.meaning) {
-              btnBg = '#d1fae5'; // 正解の緑
+              btnBg = '#d1fae5';
               btnBorder = '#10b981';
               btnColor = '#065f46';
             } else if (choice === selectedAnswer) {
-              btnBg = '#fee2e2'; // 不正解の赤
+              btnBg = '#fee2e2';
               btnBorder = '#ef4444';
               btnColor = '#991b1b';
             }
