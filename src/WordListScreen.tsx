@@ -1,95 +1,86 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { VocabularyItem } from './types';
 
 interface WordListScreenProps {
   words: VocabularyItem[];
-  initialFilter?: string;
-  onBack?: () => void;
+  initialFilter: string;
+  onBack: () => void;
+  onDelete?: (id: string) => void;
 }
 
-export const WordListScreen: React.FC<WordListScreenProps> = ({ words, initialFilter = 'all', onBack }) => {
-  const [filter, setFilter] = useState<string>(initialFilter);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+export const WordListScreen: React.FC<WordListScreenProps> = ({
+  words,
+  initialFilter,
+  onBack,
+  onDelete,
+}) => {
+  const [filter, setFilter] = React.useState<string>(initialFilter);
 
-  const filteredWords = words.filter((w) => {
-    if (filter === 'weak' && w.is_mastered) return false;
-    if (filter === 'mastered' && !w.is_mastered) return false;
-
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      return w.word.toLowerCase().includes(q) || w.meaning.includes(q);
-    }
+  const filteredWords = words.filter((item) => {
+    if (filter === 'weak') return item.is_weak;
+    if (filter === 'mastered') return item.is_mastered;
     return true;
   });
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>単語・熟語一覧</h1>
-          <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>全 {filteredWords.length} 件を表示中</p>
-        </div>
-        {onBack && (
-          <button onClick={onBack} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-            ダッシュボードへ戻る
-          </button>
-        )}
+    <div style={{ maxWidth: '896px', margin: '0 auto', padding: '2rem 1rem', textAlign: 'left' }}>
+      <button
+        onClick={onBack}
+        style={{ marginBottom: '1.5rem', background: '#e2e8f0', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}
+      >
+        ← ダッシュボードへ戻る
+      </button>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900 }}>単語・熟語 一覧画面</h2>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1' }}
+        >
+          <option value="all">すべて表示 ({words.length})</option>
+          <option value="weak">要復習 ({words.filter(w => w.is_weak).length})</option>
+          <option value="mastered">マスター済み ({words.filter(w => w.is_mastered).length})</option>
+        </select>
       </div>
 
-      <input
-        type="text"
-        placeholder="単語や意味で検索..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ccc', marginBottom: '1rem' }}
-      />
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {[
-          { id: 'all', label: 'すべて' },
-          { id: 'weak', label: '要復習（苦手）' },
-          { id: 'mastered', label: 'マスター済み' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {filteredWords.map((item) => (
+          <div
+            key={item.id}
             style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              border: '1px solid #ccc',
-              backgroundColor: filter === tab.id ? '#2563eb' : '#fff',
-              color: filter === tab.id ? '#fff' : '#000',
-              cursor: 'pointer'
+              padding: '1rem 1.25rem',
+              background: '#ffffff',
+              borderRadius: '0.75rem',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
             }}
           >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-        {filteredWords.map((word, index) => (
-          <div
-            key={`${word.id}-${index}`}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fff' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: word.type === 'word' ? '#e0f2fe' : '#f3e8ff', color: word.type === 'word' ? '#0369a1' : '#6b21a8' }}>
-                {word.type === 'word' ? '英単語' : '英熟語'}
-              </span>
-              <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: word.is_mastered ? '#dcfce7' : '#fee2e2', color: word.is_mastered ? '#15803d' : '#b91c1c' }}>
-                {word.is_mastered ? 'マスター済み' : '要復習'}
-              </span>
-            </div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.25rem 0' }}>{word.word}</h3>
-            <p style={{ margin: 0, fontWeight: 'bold', color: '#4b5563' }}>{word.meaning}</p>
-
-            {word.example_sentence && (
-              <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid #f3f4f6', fontSize: '0.85rem' }}>
-                <p style={{ margin: 0, color: '#374151' }}>{word.example_sentence}</p>
-                {word.example_translation && <p style={{ margin: 0, color: '#9ca3af' }}>{word.example_translation}</p>}
+            <div>
+              <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+                {item.word}
+                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', padding: '0.2rem 0.5rem', background: '#f1f5f9', borderRadius: '4px', color: '#64748b' }}>
+                  {item.type === 'word' ? '単語' : '熟語'}
+                </span>
               </div>
-            )}
+              <div style={{ fontSize: '0.875rem', color: '#475569', marginTop: '0.25rem' }}>{item.meaning}</div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: item.is_mastered ? '#059669' : '#dc2626' }}>
+                {item.is_mastered ? 'マスター済み' : '要復習'}
+              </span>
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(item.id)}
+                  style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.3rem 0.6rem', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                >
+                  削除
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

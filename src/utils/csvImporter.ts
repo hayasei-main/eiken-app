@@ -1,27 +1,23 @@
-import type { VocabularyItem, ItemType } from '../types';
-
-export function parseVocabularyCSV(csvText: string): Omit<VocabularyItem, 'id' | 'is_mastered'>[] {
+// 修正前: example_sentence: cols[3]
+// 修正後:
+export function parseVocabularyCSV(csvText: string) {
   const lines = csvText.split('\n');
-  const result: Omit<VocabularyItem, 'id' | 'is_mastered'>[] = [];
+  const items = [];
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line || line.startsWith('word,') || line.startsWith('単語,')) continue;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-    const cols = line.split(',').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+    const cols = trimmed.split(',').map(c => c.trim());
     if (cols.length >= 2) {
-      const rawType = cols[2]?.toLowerCase();
-      const typeVal: ItemType = (rawType === 'phrase' || rawType === 'idiom' || cols[2] === '熟語') ? 'phrase' : 'word';
-      
-      result.push({
+      items.push({
         word: cols[0],
         meaning: cols[1],
-        type: typeVal,
-        example_sentence: cols[3] || '',
-        example_translation: cols[4] || ''
+        type: (cols[2] === 'phrase' ? 'phrase' : 'word') as 'word' | 'phrase',
+        example_en: cols[3] || '',
+        example_ja: cols[4] || ''
       });
     }
   }
-
-  return result;
+  return items;
 }
