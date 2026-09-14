@@ -1,17 +1,11 @@
 import React from 'react';
 
-// 型定義を内部に直接保持してエラーを防止
 export interface WordWithStatus {
   id: number;
   term: string;
   meaning: string;
   item_type: 'word' | 'idiom';
-  part_of_speech?: string;
-  example_sentence?: string;
-  example_meaning?: string;
-  dummy_choices?: string[];
   status?: 'not_learned' | 'learning' | 'mastered';
-  consecutive_correct?: number;
   is_weak?: boolean;
 }
 
@@ -35,99 +29,130 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const progressPercent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      {/* ヒーローセクション */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div style={{ maxWidth: '896px', margin: '0 auto', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', gap: '2rem', textAlign: 'left', boxSizing: 'border-box' }}>
+      
+      {/* 1. ヒーロー看板（青グラデーション） */}
+      <div style={{
+        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #3730a3 100%)',
+        borderRadius: '1.5rem',
+        padding: '2rem',
+        color: '#ffffff',
+        boxShadow: '0 12px 25px -5px rgba(37, 99, 235, 0.35)',
+        textAlign: 'left'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div>
-            <span className="inline-block bg-white/20 backdrop-blur-md text-xs px-3 py-1 rounded-full font-bold mb-3">
+            <span style={{
+              display: 'inline-block',
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(8px)',
+              fontSize: '0.75rem',
+              padding: '0.3rem 0.8rem',
+              borderRadius: '9999px',
+              fontWeight: 'bold',
+              marginBottom: '0.75rem',
+              color: '#ffffff'
+            }}>
               英検準2級 対策コース
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black mb-2">合格を目指して学習を始めましょう！</h1>
-            <p className="text-blue-100 text-sm">クラウド同期対応：全{totalCount}単語・熟語を収録中</p>
+            <h1 style={{ fontSize: '1.85rem', fontWeight: 900, margin: '0 0 0.5rem 0', color: '#ffffff', letterSpacing: '-0.02em' }}>
+              合格を目指して学習を始めましょう！
+            </h1>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: '#dbeaff' }}>
+              クラウド同期対応：全{totalCount}単語・熟語を収録中
+            </p>
           </div>
           <button
             onClick={() => onStartQuiz({ itemType: 'all' })}
-            className="w-full md:w-auto bg-amber-400 hover:bg-amber-300 text-gray-900 font-black px-8 py-4 rounded-2xl shadow-lg transition active:scale-95 text-center text-lg cursor-pointer"
+            style={{
+              background: '#fbbf24',
+              color: '#0f172a',
+              fontWeight: 900,
+              padding: '1rem 2rem',
+              borderRadius: '1rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1.125rem',
+              boxShadow: '0 8px 20px -4px rgba(251, 191, 36, 0.5)'
+            }}
           >
             今すぐテストを開始 🚀
           </button>
         </div>
 
-        {/* 進捗バー */}
-        <div className="mt-8 bg-white/10 p-4 rounded-2xl backdrop-blur-xs">
-          <div className="flex justify-between text-xs font-bold mb-2">
+        {/* 進捗プログレスバー */}
+        <div style={{ marginTop: '1.75rem', background: 'rgba(255, 255, 255, 0.15)', padding: '1rem 1.25rem', borderRadius: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 'bold' }}>
             <span>マスター率</span>
             <span>{progressPercent}% ({masteredCount}/{totalCount}語)</span>
           </div>
-          <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden">
-            <div
-              className="bg-emerald-400 h-full transition-all duration-500 rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            />
+          <div style={{ background: 'rgba(0, 0, 0, 0.25)', height: '12px', borderRadius: '9999px', overflow: 'hidden', marginTop: '0.5rem' }}>
+            <div style={{ background: '#34d399', height: '100%', width: `${progressPercent}%`, borderRadius: '9999px', transition: 'width 0.5s ease' }} />
           </div>
         </div>
       </div>
 
-      {/* 学習モード選択カード */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 2. 3列のモダンカード選択 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+        
         <div
           onClick={() => onStartQuiz({ itemType: 'all' })}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group"
+          style={{ background: '#ffffff', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)', cursor: 'pointer', textAlign: 'left' }}
         >
-          <div className="text-3xl mb-3">🎯</div>
-          <h3 className="font-extrabold text-lg group-hover:text-blue-600 transition">総合テスト</h3>
-          <p className="text-xs text-gray-500 mt-1">単語と熟語をランダムにテスト</p>
-          <span className="inline-block text-xs font-bold text-blue-600 mt-4">全 {totalCount} 問 &rarr;</span>
+          <div style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>🎯</div>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: '#0f172a' }}>総合テスト</h3>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>単語と熟語をランダムにテスト</p>
+          <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 'bold', color: '#2563eb', marginTop: '1.25rem' }}>全 {totalCount} 問 &rarr;</span>
         </div>
 
         <div
           onClick={() => onStartQuiz({ itemType: 'word' })}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group"
+          style={{ background: '#ffffff', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)', cursor: 'pointer', textAlign: 'left' }}
         >
-          <div className="text-3xl mb-3">📖</div>
-          <h3 className="font-extrabold text-lg group-hover:text-blue-600 transition">英単語モード</h3>
-          <p className="text-xs text-gray-500 mt-1">頻出英単語に絞って集中学習</p>
-          <span className="inline-block text-xs font-bold text-blue-600 mt-4">全 {wordCount} 語 &rarr;</span>
+          <div style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>📖</div>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: '#0f172a' }}>英単語モード</h3>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>頻出英単語に絞って集中学習</p>
+          <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 'bold', color: '#2563eb', marginTop: '1.25rem' }}>全 {wordCount} 語 &rarr;</span>
         </div>
 
         <div
           onClick={() => onStartQuiz({ itemType: 'idiom' })}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group"
+          style={{ background: '#ffffff', padding: '1.5rem', borderRadius: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)', cursor: 'pointer', textAlign: 'left' }}
         >
-          <div className="text-3xl mb-3">🔗</div>
-          <h3 className="font-extrabold text-lg group-hover:text-blue-600 transition">英熟語モード</h3>
-          <p className="text-xs text-gray-500 mt-1">重要な熟語・フレーズをマスター</p>
-          <span className="inline-block text-xs font-bold text-blue-600 mt-4">全 {idiomCount} 語 &rarr;</span>
+          <div style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>🔗</div>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: '#0f172a' }}>英熟語モード</h3>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>重要な熟語・フレーズをマスター</p>
+          <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 'bold', color: '#2563eb', marginTop: '1.25rem' }}>全 {idiomCount} 語 &rarr;</span>
         </div>
+
       </div>
 
-      {/* ステータスショートカット */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div
-          onClick={() => onNavigateToList('weak')}
-          className="bg-red-50 p-4 rounded-2xl border border-red-100 cursor-pointer hover:bg-red-100 transition"
-        >
-          <span className="text-xs font-bold text-red-600 block">要復習（苦手）</span>
-          <span className="text-2xl font-black text-red-700">{weakCount} <span className="text-xs font-normal">語</span></span>
+      {/* 3. 下部ステータスパネル */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        
+        <div onClick={() => onNavigateToList('weak')} style={{ background: '#fef2f2', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #fecaca', cursor: 'pointer', textAlign: 'left' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#dc2626', display: 'block', marginBottom: '0.25rem' }}>要復習（苦手）</span>
+          <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#b91c1c' }}>
+            {weakCount} <span style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>語</span>
+          </span>
         </div>
 
-        <div
-          onClick={() => onNavigateToList('mastered')}
-          className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition"
-        >
-          <span className="text-xs font-bold text-emerald-600 block">マスター済み</span>
-          <span className="text-2xl font-black text-emerald-700">{masteredCount} <span className="text-xs font-normal">語</span></span>
+        <div onClick={() => onNavigateToList('mastered')} style={{ background: '#ecfdf5', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #a7f3d0', cursor: 'pointer', textAlign: 'left' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#059669', display: 'block', marginBottom: '0.25rem' }}>マスター済み</span>
+          <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#047857' }}>
+            {masteredCount} <span style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>語</span>
+          </span>
         </div>
 
-        <div
-          onClick={() => onNavigateToList('all')}
-          className="bg-gray-50 p-4 rounded-2xl border border-gray-200 cursor-pointer hover:bg-gray-100 transition col-span-2 sm:col-span-1"
-        >
-          <span className="text-xs font-bold text-gray-600 block">登録単語数</span>
-          <span className="text-2xl font-black text-gray-800">{totalCount} <span className="text-xs font-normal">語</span></span>
+        <div onClick={() => onNavigateToList('all')} style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e2e8f0', cursor: 'pointer', textAlign: 'left' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '0.25rem' }}>登録単語数</span>
+          <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1e293b' }}>
+            {totalCount} <span style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>語</span>
+          </span>
         </div>
+
       </div>
+
     </div>
   );
 };

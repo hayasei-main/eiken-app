@@ -45,9 +45,8 @@ export function App() {
     );
   };
 
-  // Dashboard用の形式変換
-  const dashboardWords = items.map(item => ({
-    id: typeof item.id === 'number' ? item.id : parseInt(item.id) || 0,
+  const dashboardWords = items.map((item, idx) => ({
+    id: typeof item.id === 'number' ? item.id : idx + 1,
     term: item.word,
     meaning: item.meaning,
     item_type: item.type === 'word' ? ('word' as const) : ('idiom' as const),
@@ -77,8 +76,7 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      {/* 綺麗デザインのダッシュボード */}
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', paddingBottom: '3rem' }}>
       <DashboardScreen
         words={dashboardWords}
         onStartQuiz={(options) => {
@@ -92,17 +90,17 @@ export function App() {
       />
 
       {/* CSVインポートエリア */}
-      <div className="max-w-4xl mx-auto px-4 mt-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-extrabold text-lg text-gray-800 mb-2">📁 CSVデータから一括登録</h3>
-          <p className="text-xs text-gray-500 mb-4">
-            フォーマット例: <code className="bg-gray-100 px-2 py-1 rounded text-gray-700">単語,意味,wordまたはphrase,例文,例文訳</code>
+      <div style={{ maxWidth: '896px', margin: '0 auto', padding: '0 1rem' }}>
+        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.5rem 0' }}>📁 CSVデータから一括登録</h3>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1rem' }}>
+            フォーマット例: <code style={{ background: '#f1f5f9', padding: '0.2rem 0.4rem', borderRadius: '4px' }}>単語,意味,wordまたはphrase,例文,例文訳</code>
           </p>
           <input
             type="file"
             accept=".csv"
             onChange={handleFileUpload}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+            style={{ fontSize: '0.875rem' }}
           />
         </div>
       </div>
